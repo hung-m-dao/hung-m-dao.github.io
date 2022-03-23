@@ -3,17 +3,18 @@
 *  Copyright (c) John Sundell 2019
 *  MIT license, see LICENSE file for details
 */
+@import url("https://use.typekit.net/zjo6pqv.css");
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-family: 'lato', sans-serif;
 }
 
 body {
-    background: #fff;
-    color: #000;
-    font-family: Helvetica, Arial;
+    background: #faf4ed;
+    color: #575279;
     text-align: center;
 }
 
@@ -26,7 +27,7 @@ body {
 }
 
 header {
-    background-color: #eee;
+    background-color: #f2e9e1;
 }
 
 header .wrapper {
@@ -41,7 +42,7 @@ header a {
 
 header .site-name {
     font-size: 1.5em;
-    color: #000;
+    color: #575279;
     font-weight: bold;
 }
 
@@ -84,7 +85,7 @@ a {
     display: block;
     padding: 20px;
     border-radius: 20px;
-    background-color: #eee;
+    background-color: #f4ede8;
     margin-bottom: 20px;
 }
 
@@ -108,8 +109,8 @@ a {
 .tag-list li,
 .tag {
     display: inline-block;
-    background-color: #000;
-    color: #ddd;
+    background-color: #d7827e;
+    color: #ffffff;
     padding: 4px 6px;
     border-radius: 5px;
     margin-right: 5px;
@@ -140,30 +141,5 @@ a {
 }
 
 footer {
-    color: #8a8a8a;
-}
-
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #222;
-    }
-
-    body,
-    header .site-name {
-        color: #ddd;
-    }
-
-    .item-list > li {
-        background-color: #333;
-    }
-
-    header {
-        background-color: #000;
-    }
-}
-
-@media(max-width: 600px) {
-    .wrapper {
-        padding: 40px 20px;
-    }
+    color: #9893a5;
 }
