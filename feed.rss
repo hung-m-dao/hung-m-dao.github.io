@@ -1,4 +1,127 @@
-<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>My blog</title><description>Hello! I'm Hung, and this is my personal space.</description><link>https://hung-m-dao.github.io/</link><language>en</language><lastBuildDate>Sat, 2 Apr 2022 16:13:06 +0000</lastBuildDate><pubDate>Sat, 2 Apr 2022 16:13:06 +0000</pubDate><ttl>250</ttl><atom:link href="https://hung-m-dao.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://hung-m-dao.github.io/thao/race-condition</guid><title>Race condition là gì ?</title><description>Concurrency Problems - Race condition</description><link>https://hung-m-dao.github.io/thao/race-condition</link><pubDate>Sat, 2 Apr 2022 17:35:00 +0000</pubDate><content:encoded><![CDATA[<h1>Race condition là gì ?</h1><h2>Định nghĩa</h2><p>Race condition là tình huống một hay nhiều thread cùng cố gắng thay đổi giá trị của một biến trong vùng nhớ chung (shared memory) tại cùng một thời điểm, kết quả của việc thực thi phụ thuộc vào thứ tự cụ thể mà việc truy cập diễn ra, và thứ tự truy cập đó ta không thể kiểm soát. Điều này có thể dẫn đến kết quả không mong muốn của toàn bộ quá trình.</p><h2>Ví dụ</h2><p>Để hiểu rõ về vấn đề này mình đã viết một chương trình minh họa race condition bằng Go, mình sẽ dùng một khái niệm gần tương tự thread ở level OS để minh họa đó là <a href="https://go.dev/tour/concurrency/1">Gorountine</a> - lightweight thread được cung cấp bởi Go. Trong ví dụ này chúng ta sẽ mô phỏng việc "Thêm vào giả hàng" ở các trang thương mại điện tử, giả sử có một mặt hàng X hiện đang còn 1000 sản phẩm trong kho, tại thời điểm mở bán, 1000 khách hàng đồng thời thêm sản phẩm đó vào giỏ hàng. Sau đó ta sẽ kiểm tra xem liệu số lượng tồn kho sau khi 1000 khách hàng đã thêm vào giỏ có đúng bằng 0 theo đúng lý thuyết. Chúng ta sẽ mô phỏng 1000 request thêm vào giỏ hàng bằng việc tạo ra 1000 Gorountines và nhiệm vụ của mỗi Goroutine là giảm số lượng <code>stock</code> đi 1 đơn vị, <code>stock</code> ở đây sẽ global variable và được sử dụng chung bởi tất cả Gorountine như điều kiện đã đặt ra.</p><h3>Tiến hành</h3><pre><code class="language-go">var stock int = 1000
+<?xml version="1.0" encoding="UTF-8"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>My blog</title><description>Hello! I'm Hung, and this is my personal space.</description><link>https://hung-m-dao.github.io/</link><language>en</language><lastBuildDate>Tue, 5 Apr 2022 12:42:47 +0000</lastBuildDate><pubDate>Tue, 5 Apr 2022 12:42:47 +0000</pubDate><ttl>250</ttl><atom:link href="https://hung-m-dao.github.io/feed.rss" rel="self" type="application/rss+xml"/><item><guid isPermaLink="true">https://hung-m-dao.github.io/thao/go-select</guid><title>Go Concurrency - Select Statement</title><description>Go Concurrency - Select statement</description><link>https://hung-m-dao.github.io/thao/go-select</link><pubDate>Tue, 5 Apr 2022 14:55:00 +0000</pubDate><content:encoded><![CDATA[<h1>Go Concurrency - Select Statement</h1><p>Câu lệnh <code>select</code> trong Go có thể được xem là một trong những câu lệnh quan trọng mà Gopher cần phải nắm rõ khi làm việc với concurrency programing. Nó được xem như chất kết dính gắn kết các channel lại với nhau, đồng thời từ đó kiểm soát và giải quyết những vấn đề phổ biến trong mô hình concurrency của Go.</p><h2>1. Select statement là gì ? (WHAT)</h2><p>Câu lệnh select là một control structure dùng để lựa chọn hoạt động tại một thời điểm nhất định trong một tập các hoạt động "gửi (send)" và "nhận (recieve)" có thể xảy ra, để từ đó tiếp tục thực hiện các công việc kế tiếp dựa trên hoạt động được chọn. Về mặt cấu trúc thì <code>select statement</code> gần tương tự như <code>switch statement</code> (mọi người có thể tham khảo thêm specification của <code>select statement</code> <a href="https://go.dev/ref/spec#Select_statements">tại đây</a>)</p><pre><code class="language-go">var c1, c2 &lt;-chan interface{}
+var c3 chan&lt;- interface{}
+
+select {
+case &lt;- c1:
+ // Do something
+case s := &lt;- c2:
+ // Do something with s
+case c3 &lt;- struct{}{}:
+ // Do something
+}
+</code></pre><h2>2. Tại sao cần select ? (WHY)</h2><p>Để hiểu lý do ta cùng xem xét ví dụ sau đây</p><pre><code class="language-go">const TARGET_COUNT = //fill this
+func wait() {
+	time.Sleep(time.Duration(rand.Intn(30) + 1) * time.Millisecond)
+}
+
+func main() {
+	chan1 := make(chan int)
+	chan2 := make(chan int)
+	var count1, count2 int
+	go func(ch chan int) {
+		for {
+			wait()
+			ch &lt;- 1
+			count1++
+			if count1 == TARGET_COUNT {
+				close(ch)
+				break
+			}
+		}
+	}(chan1)
+
+	go func(ch chan int) {
+		for {
+			wait()
+			ch &lt;- 2
+			count2++
+			if count2 == TARGET_COUNT {
+				close(ch)
+				break
+			}
+		}
+	}(chan2)
+
+    // without select
+	for {
+		&lt;-chan1
+		&lt;-chan2
+		if count1 == TARGET_COUNT || count2 == TARGET_COUNT {
+			break
+		}
+	}
+
+	fmt.Println(count1, count2)
+
+}
+</code></pre><p>Trong ví dụ trên minh đã sử dụng hàm <code>main</code> một web server đang gọi request tới 2 service khác nhau trong hệ thống để lấy data bằng việc sử dụng 2 Goroutine và 2 unbuffered channel tương ứng. Do để giống với request thật nên mình đã dùng hàm <code>wait()</code> tương ứng với việc mỗi request cần tốn thời gian để xử lý I/O mà ở đây thời gian sẽ được random với mỗi requets trong khoảng từ 1 đến 30 miliseconds. Chương trình sẽ kết thúc khi tất cả request (được đặc tả bằng <code>TARGET_COUNT</code>) được cả hai Gorountine handle xong, một điều quan trọng trong ví dụ trên mình không dùng <code>select</code> để handle việc đọc dữ liệu ở các channel. Vậy nếu dùng select thì nó sẽ ra sao ?</p><pre><code class="language-go">// with 
+	for {
+		if count1 == TARGET_COUNT &amp;&amp; count2 == TARGET_COUNT {
+			break
+		}
+		select {
+		case &lt;-chan1:
+		case &lt;-chan2:
+		}
+	}
+</code></pre><p>Và sau khi chạy chương trình trên thì ta được thời gian thực thi tương ứng cho việc không dùng và có dùng <code>select</code> như sau</p><pre><code class="language-shell">Req(TARGET_COUNT)   with_select     without_select 
+10000 			    2m39.559101617s	3m4.613266231s 
+10000			    2m39.482978441s	3m4.713822436s	
+20000               5m19.559837128s 6m10.476351502s
+20000               5m19.615773995s 6m10.342784533s
+30000               8m1.715319027s  9m17.175114517s
+30000               8m1.257952793s  9m17.100923682s
+</code></pre><p>Ở đây mình cho chương handle số lượng request lầ lượt là 10000, 20000, 30000 cho mỗi lần chạy và chạy 2 lần cho mỗi số lượng request để tránh sai số . Kết quả ở trên được chạy trên máy tính linux với CPU Intel® Core™ i5-6500 CPU @ 3.20GHz × 4, nên lưu ý kết quả khi chạy ở các thiết bị với vi xử lý khác có thể sẽ có kết quả khác. Qua kết quả trên ta có thể thấy việc sử dụng select giúp cho việc xử lý request nhanh hơn hẳn với việc không sử dụng. Ở trên các bạn có thể thấy chỉ có 2 channel và thời gian I/O cũng chỉ là vài milisecond và số lượng request chỉ dừng lại ở mức chục ngàn, nhưng với các hệ thống thực tế thì chúng ta có thể cần dùng nhiều channel hơn, thời gian thực hiện I/O cho mỗi request kéo dài hơn và số lượng request là lớn hơn rất nhiều.</p><p>Nếu chúng ta nhìn kỹ ở phần không sử dụng <code>select</code> thì đoạn code đó không thực sự là <code>concurrency</code>, hai channel của chúng ta được đọc một cách tuần tự, mà như các bạn đã biết các channel chỉ có thể được đọc khi nó hoàn tất việc ghi dữ liệu tức là nó sẽ block Gorountine đang sở hữu nó cho tới khi có một hoạt động ghi vào channel đó. Nhìn vào đoạn code trên thì channel 1 luôn được ưu tiên để đọc trước, nên trong một số trường hợp khi thời gian I/O của Gorountine chứa channel 2 thấp hơn dẫn đến channel 2 đã ready để được xử lý nhưng chúng vẫn phải đợi đến khi Gorountine của channel 1 hoàn thành công việc. Đây chính là tình huống mà starvation đã xảy ra tại Goroutine chứa channel 2. Tương tự nếu chúng ta thay đổi thứ tự của cả 2 thì hiện tượng như vậy cũng sẽ xảy ra với Gorountine chứa channel 1. Đây cũng chính là lý do tại sao chúng ta cần sử dụng <code>select</code>.</p><p>Khi sử dụng <code>select</code> bất cứ khi nào một channel nào ready(sẵn sàng để ghi hoặc đọc) trong các channel đang tồn tại trong câu lệnh select, thì ngay lập tức nó sẽ được chọn để tiếp tục handle tiếp tục bởi <code>select</code>. Chính vì thế sẽ gần như sẽ không có idle time , resource cũng được tận dụng hết khả năng và đó mới thật sự là "Concurrency".</p><h2>2. Đào sâu thêm về select</h2><h3>2.1 Khi các channel đều sẵn sàng để ghi tại một thời điểm</h3><p>Để biểu diễn các channel sẵn sàng để ghi tại một thời điểm, chúng ta sẽ close channel ngay sau khi khởi tạo. Điều này tận dụng việc channel vẫn có thể được đọc và luôn sẵn sàng để đọc sau khi đóng như yêu cầu.</p><pre><code class="language-go">func main()
+	c1 := make(chan interface{})
+	close(c1)
+	c2 := make(chan interface{})
+	close(c2)
+	c3 := make(chan interface{})
+	close(c3)
+	var c1Count, c2Count, c3count int
+	for i := 3000; i &gt;= 0; i-- {
+		select {
+		case &lt;-c1:
+			c1Count++
+		case &lt;-c2:
+			c2Count++
+		case &lt;-c3:
+			c3count++
+		}
+	}
+	fmt.Printf("c1Count: %d\nc2Count: %d\nc3Count: %d\n", c1Count, c2Count, c3count)
+</code></pre><p>Kêt quả sau khi thực thi chương trình trên</p><pre><code class="language-shell">c1Count: 978
+c2Count: 999
+c3Count: 1024
+</code></pre><p>Kết quả cho thấy 3 biến count có giá trị gần bằng nhau, điều này cho thấy các hoạt động đọc dữ liệu từ channel khi sử dụng <code>select</code> được lựa chọn một cách bình đẳng không có một case nào được ưu tiên hơn. Để làm được điều này Go đã sử dụng một thuật toán uniform pseudo-random để lựa chọn channel tại mỗi thời điểm thay vì chọn từ trên xuống như trong trường hợp của <code>switch case</code>. Nó giúp việc lựa chọn không bị lệch về bất kỳ một Goroutine nào để tránh xảy ra hiện tượng starvation.</p><h3>2.2 Khi tất cả các channel không bao giờ sẵn sàng</h3><p>Trong trường hợp tất cả các channel bị stuck vì một lý do nào đó chúng ta cần có cách để kết thúc việc chờ đợi, mà một cách quen thuộc chính là set một giá trị timeout, với <code>select</code> chúng ta sẽ hiện thực như sau</p><pre><code class="language-go">func main() {
+    start := time.Now()
+    var c &lt;-chan int
+    select {
+    case &lt;-c:
+    case &lt;-time.After(1 * time.Second):
+        fmt.Println("Timed out.")
+    }
+    fmt.Println("Elapsed time: ", time.Since(start))
+}
+
+Timed out.
+Time elapsed:  1.001240483s
+</code></pre><p><code>time.Afetr()</code> sẽ trả về một read channel sau một khoảng thời gian được truyền vào, ta sẽ dùng nó làm một nhánh lựa chọn trong <code>select</code> để đảm bảo việc timeout của các channel.</p><h3>2.3 Khi chúng ta muốn tận dụng thời gian mà tất cả các đều channel đang bận</h3><p>Đây là lúc <code>default</code> xuất hiện, gần giống với <code>switch</code>, <code>default</code> branch sẽ dược thực thi khi tất cả các channel bị block.</p><pre><code class="language-go">done := make(chan interface{})
+go func() {
+    // Do something with a long interval 
+    close(done)
+}
+loop:
+    for {
+        select {
+        case &lt;-done:
+            break loop
+        default:
+            //Do something when all channel blocked
+        }
+        //or Do something here 
+    }
+</code></pre><h3>2.4 Một số lưu ý khác</h3><ul><li>Câu lệnh <code>select</code> cũng cho phép chúng ta gán giá trị tại từng case có chứa recieve statement bằng "short variable declaration" ví dụ <code>case s := &lt;-chan1</code>, lúc này giá trị được đọc từ <code>chan1</code> sẽ được gán cho biến <code>s</code></li><li>Ngoài ra chúng ta cũng được Go cung cấp cấp câu lệnh select rỗng <code>select{}</code>, nó đơn giản là block Gorountine tương ứng mãi mãi và chỉ kết thúc khi có sự can thiêp bên ngoài. Trong những bài viết kế tiếp về Concurrency trong Go, chúng ta sẽ cùng nhau tìm hiểu kỹ hơn về nó. ## 3. Kết Qua bài viết này mình đã giới thiệu những khái niệm và cách sử dụng cơ bản về câu lệnh <code>select</code> của Go, một trong những chất liệu quan trọng của mô hình Concurrency của Go</li></ul><h2>Read more</h2><p><a href="https://go.dev/ref/spec#Select_statements">Go Select Statement Specification</a> <a href="https://www.amazon.com/Learning-Go-Idiomatic-Real-World-Programming/dp/1492077216#:~:text=Networking%20%26%20Cloud%20Computing-,Learning%20Go%3A%20An%20Idiomatic%20Approach%20to%20Real%2DWorld%20Go%20Programming,-1st%20Edition">Learning Go: An Idiomatic Approach to Real-World Go Programming</a></p><p><a href="https://www.amazon.com/Programming-Language-Addison-Wesley-Professional-Computing/dp/0134190440">Go Programming Language, The (Addison-Wesley Professional Computing Series)</a></p><p><a href="https://www.amazon.com/Concurrency-Go-Tools-Techniques-Developers/dp/1491941197">Concurrency in Go: Tools and Techniques for Developers</a></p>]]></content:encoded></item><item><guid isPermaLink="true">https://hung-m-dao.github.io/thao/race-condition</guid><title>Race condition là gì ?</title><description>Concurrency Problems - Race condition</description><link>https://hung-m-dao.github.io/thao/race-condition</link><pubDate>Sat, 2 Apr 2022 17:35:00 +0000</pubDate><content:encoded><![CDATA[<h1>Race condition là gì ?</h1><h2>Định nghĩa</h2><p>Race condition là tình huống một hay nhiều thread cùng cố gắng thay đổi giá trị của một biến trong vùng nhớ chung (shared memory) tại cùng một thời điểm, kết quả của việc thực thi phụ thuộc vào thứ tự cụ thể mà việc truy cập diễn ra, và thứ tự truy cập đó ta không thể kiểm soát. Điều này có thể dẫn đến kết quả không mong muốn của toàn bộ quá trình.</p><h2>Ví dụ</h2><p>Để hiểu rõ về vấn đề này mình đã viết một chương trình minh họa race condition bằng Go, mình sẽ dùng một khái niệm gần tương tự thread ở level OS để minh họa đó là <a href="https://go.dev/tour/concurrency/1">Gorountine</a> - lightweight thread được cung cấp bởi Go. Trong ví dụ này chúng ta sẽ mô phỏng việc "Thêm vào giả hàng" ở các trang thương mại điện tử, giả sử có một mặt hàng X hiện đang còn 1000 sản phẩm trong kho, tại thời điểm mở bán, 1000 khách hàng đồng thời thêm sản phẩm đó vào giỏ hàng. Sau đó ta sẽ kiểm tra xem liệu số lượng tồn kho sau khi 1000 khách hàng đã thêm vào giỏ có đúng bằng 0 theo đúng lý thuyết. Chúng ta sẽ mô phỏng 1000 request thêm vào giỏ hàng bằng việc tạo ra 1000 Gorountines và nhiệm vụ của mỗi Goroutine là giảm số lượng <code>stock</code> đi 1 đơn vị, <code>stock</code> ở đây sẽ global variable và được sử dụng chung bởi tất cả Gorountine như điều kiện đã đặt ra.</p><h3>Tiến hành</h3><pre><code class="language-go">var stock int = 1000
 
 func add_to_cart(w *sync.WaitGroup) {
 	defer w.Done()
